@@ -12,41 +12,45 @@ const CRICBUZZ_LIVE_URL = 'https://www.cricbuzz.com/cricket-match/live-scores';
 
 app.get('/live-scores', async (req, res) => {
   try {
+    // Get page HTML with browser-like User-Agent
     const { data } = await axios.get(CRICBUZZ_LIVE_URL, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
-                      '(KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) ' +
+          'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0 Safari/537.36'
       }
     });
-    const $ = cheerio.load(data);
 
+    const $ = cheerio.load(data);
     const matches = [];
 
-    // Live matches are in ul.cb-lv-scrs-list > li
-    $('ul.cb-lv-scrs-list > li').each((i, el) => {
+    // Each live match is in <div class="cb-mtch-lst"> within ul > li
+    $('.cb-mtch-lst > ul > li').each((i, el) => {
       const match = {};
 
-      // Teams: inside span or div with class "cb-ovr-flo cb-hmscg-tm-nm"
+      // Extract team names - anchor texts inside .cb-ovr-flo .text-hvr-underline
       const teams = [];
-      $(el).find('div.cb-lv-scrs-col > div > div > a').each((i, t) => {
-        teams.push($(t).text().trim());
+      $(el).find('.cb-ovr-flo .text-hvr-underline').each((i, teamEl) => {
+        teams.push($(teamEl).text().trim());
       });
 
-      // Status: A div with class "cb-lv-scrs-status" or "cb-ovr-mtch-status"
-      const status = $(el).find('div.cb-lv-scrs-status, div.cb-ovr-mtch-status').first().text().trim();
+      // Extract score/status from .cb-ovr-scrs-col (contains scores or status)
+      const status = $(el).find('.cb-ovr-scrs-col').text().trim();
 
-      // Venue - Sometimes not available here, so skip
+      // Extract venue and time from .cb-ovr-mtch-status (sometimes has status or venue info)
+      const venue = $(el).find('.cb-ovr-mtch-status').text().trim();
 
       match.teams = teams;
       match.status = status;
-      match.venue = ''; // venue is rarely shown at this part
+      match.venue = venue;
 
-      matches.push(match);
+      // Only push if we have teams (to avoid empty entries)
+      if (teams.length > 0) matches.push(match);
     });
 
+    // Return JSON
     res.json({ matches });
   } catch (error) {
-    console.error('Scraping error:', error.message);
+    console.error('Error scraping live scores:', error.message);
     res.status(500).json({ error: 'Failed to fetch live scores' });
   }
 });
