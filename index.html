@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Cricbuzz Live Scores</title>
+<style>
+  body { font-family: Arial, sans-serif; max-width: 700px; margin: 2rem auto; padding: 0 1rem; }
+  h1 { text-align: center; }
+  .match { border: 1px solid #ddd; border-radius: 6px; margin: 1rem 0; padding: 1rem; }
+  .teams { font-weight: bold; }
+  .status { color: green; }
+</style>
+</head>
+<body>
+<h1>Cricbuzz Live Scores</h1>
+<div id="matches">Loading live scores...</div>
+
+<script>
+  // Replace YOUR_RENDER_URL with your actual Render backend URL without trailing slash
+  const API_URL = 'https://YOUR_RENDER_SERVICE_NAME.onrender.com/live-scores';
+
+  async function fetchScores() {
+    try {
+      const res = await fetch(API_URL);
+      if (!res.ok) throw new Error('Network response was not ok');
+      const data = await res.json();
+
+      const container = document.getElementById('matches');
+      container.innerHTML = '';
+
+      if (!data.matches || data.matches.length === 0) {
+        container.textContent = 'No live matches currently';
+        return;
+      }
+
+      data.matches.forEach(match => {
+        const div = document.createElement('div');
+        div.className = 'match';
+        div.innerHTML = `
+          <div class="teams">${match.teams.join(' vs ')}</div>
+          <div class="status">${match.status || 'Status unknown'}</div>
+          <div class="venue">${match.venue || ''}</div>
+        `;
+        container.appendChild(div);
+      });
+    } catch (err) {
+      document.getElementById('matches').textContent = 'Failed to load scores.';
+      console.error(err);
+    }
+  }
+
+  fetchScores();
+  setInterval(fetchScores, 60000); // refresh every minute
+</script>
+</body>
+</html>
