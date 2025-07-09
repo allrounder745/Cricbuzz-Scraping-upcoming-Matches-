@@ -1,7 +1,0 @@
-services:
-  - type: cron
-    name: cricbuzz-upcoming-matches
-    schedule: "@every 12h"  # Runs every 12 hours (you can change it)
-    runtime: python
-    buildCommand: ""
-    startCommand: "python app.py"
