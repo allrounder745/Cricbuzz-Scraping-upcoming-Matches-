@@ -12,30 +12,41 @@ const CRICBUZZ_LIVE_URL = 'https://www.cricbuzz.com/cricket-match/live-scores';
 
 app.get('/live-scores', async (req, res) => {
   try {
-    const { data } = await axios.get(CRICBUZZ_LIVE_URL);
+    const { data } = await axios.get(CRICBUZZ_LIVE_URL, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
+                      '(KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'
+      }
+    });
     const $ = cheerio.load(data);
 
     const matches = [];
 
-    $('.cb-mtch-lst li').each((i, el) => {
+    // Live matches are in ul.cb-lv-scrs-list > li
+    $('ul.cb-lv-scrs-list > li').each((i, el) => {
       const match = {};
 
-      const teams = $(el).find('.text-hvr-underline.cb-ovr-flo').map((i, teamEl) => $(teamEl).text().trim()).get();
+      // Teams: inside span or div with class "cb-ovr-flo cb-hmscg-tm-nm"
+      const teams = [];
+      $(el).find('div.cb-lv-scrs-col > div > div > a').each((i, t) => {
+        teams.push($(t).text().trim());
+      });
 
-      const status = $(el).find('.cb-ovr-flo .cb-ovr-scrs-col').text().trim();
+      // Status: A div with class "cb-lv-scrs-status" or "cb-ovr-mtch-status"
+      const status = $(el).find('div.cb-lv-scrs-status, div.cb-ovr-mtch-status').first().text().trim();
 
-      const venue = $(el).find('.cb-ovr-flo .cb-ovr-mtch-status').text().trim();
+      // Venue - Sometimes not available here, so skip
 
       match.teams = teams;
       match.status = status;
-      match.venue = venue;
+      match.venue = ''; // venue is rarely shown at this part
 
       matches.push(match);
     });
 
     res.json({ matches });
   } catch (error) {
-    console.error(error);
+    console.error('Scraping error:', error.message);
     res.status(500).json({ error: 'Failed to fetch live scores' });
   }
 });
